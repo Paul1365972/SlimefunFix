@@ -1,0 +1,15 @@
+name: SlimefunInputNodeFix
+author: Paul1365972
+version: 1.0
+main: de.paul1365972.slimefunfix.InputNodeFix
+depend: [Slimefun, CS-CoreLib]
+
+commands:
+  slimefunfix:
+    usage: /<command> [y]
+    description: Fixes Slimefun Chunk at given Y
+
+permissions:
+  slimefunfix.inputnodefix:
+    description: Allows you to fix chunks
+    default: true
