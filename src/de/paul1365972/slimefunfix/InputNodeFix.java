@@ -22,13 +22,20 @@ public class InputNodeFix extends JavaPlugin {
 	
 	private CargoInputNode inputNode;
 	
-	private Class<?> craftWorldClass = getCBClass("CraftWorld");
-	private Class<?> tileEntityClass = getNMSClass("TileEntity");
-	private Class<?> nbtTagCompoundClass = getNMSClass("NBTTagCompound");
-	private Class<?> nbtTagListClass = getNMSClass("NBTTagList");
+	private String version;
+	
+	private Class<?> craftWorldClass;
+	private Class<?> tileEntityClass;
+	private Class<?> nbtTagCompoundClass;
+	private Class<?> nbtTagListClass;
 	
 	@Override
 	public void onEnable() {
+		version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3] + ".";
+		craftWorldClass = getOCBClass("CraftWorld");
+		tileEntityClass = getNMSClass("TileEntity");
+		nbtTagCompoundClass = getNMSClass("NBTTagCompound");
+		nbtTagListClass = getNMSClass("NBTTagList");
 		PluginCommand cmd = getCommand("slimefunfix");
 		cmd.setExecutor(this);
 		cmd.setTabCompleter(this);
@@ -41,6 +48,7 @@ public class InputNodeFix extends JavaPlugin {
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+		if (command.getName().equalsIgnoreCase("slimefunfix"))
 		if (!(sender instanceof Player)) {
 			sender.sendMessage("You need to be a player");
 			return true;
@@ -98,10 +106,6 @@ public class InputNodeFix extends JavaPlugin {
 		if (block == null || block.getType() != Material.SKULL)
 			return false;
 		Location loc = block.getLocation();
-		try {
-			
-		} catch (Exception e) {
-		}
 		Object tileEntity = craftWorldClass.getMethod("getTileEntityAt", int.class, int.class, int.class).invoke(block.getWorld(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
 		Object ntc = nbtTagCompoundClass.getConstructor().newInstance();
 		tileEntityClass.getMethod("save", nbtTagCompoundClass).invoke(tileEntity, ntc);
@@ -123,9 +127,8 @@ public class InputNodeFix extends JavaPlugin {
 		return texture.equals("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTZkMWMxYTY5YTNkZTlmZWM5NjJhNzdiZjNiMmUzNzZkZDI1Yzg3M2EzZDhmMTRmMWRkMzQ1ZGFlNGM0In19fQ==");
 	}
 	
-	private Class<?> getCBClass(String nmsClassString) {
-		String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3] + ".";
-	    String name = "org.bukkit.craftbukkit." + version + nmsClassString;
+	private Class<?> getOCBClass(String ocbClassString) {
+	    String name = "org.bukkit.craftbukkit." + version + ocbClassString;
 	    Class<?> nmsClass = null;
 		try {
 			nmsClass = Class.forName(name);
@@ -136,7 +139,6 @@ public class InputNodeFix extends JavaPlugin {
 	}
 	
 	private Class<?> getNMSClass(String nmsClassString) {
-		String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3] + ".";
 	    String name = "net.minecraft.server." + version + nmsClassString;
 	    Class<?> nmsClass = null;
 		try {
