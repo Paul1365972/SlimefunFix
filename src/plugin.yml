@@ -10,6 +10,6 @@ commands:
     description: Fixes Slimefun Chunk at given Y
 
 permissions:
-  slimefunfix.inputnodefix:
+  slimefunfix.nodes:
     description: Allows you to fix chunks
     default: true
