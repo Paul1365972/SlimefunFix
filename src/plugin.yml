@@ -1,13 +1,13 @@
 name: SlimefunInputNodeFix
 author: Paul1365972
-version: 1.0
+version: 1.2
 main: de.paul1365972.slimefunfix.InputNodeFix
 depend: [Slimefun, CS-CoreLib]
 
 commands:
   slimefunfix:
-    usage: /<command> [y]
-    description: Fixes Slimefun Chunk at given Y
+    usage: /<command> [force|blacklist]
+    description: Fixes Slimefun Chunk in an 10 Block range
 
 permissions:
   slimefunfix.nodes:
