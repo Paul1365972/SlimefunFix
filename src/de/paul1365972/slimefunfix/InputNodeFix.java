@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -17,7 +18,7 @@ import me.mrCookieSlime.Slimefun.Objects.SlimefunItem.handlers.ItemHandler;
 import me.mrCookieSlime.Slimefun.Objects.SlimefunItem.machines.CargoInputNode;
 import me.mrCookieSlime.Slimefun.api.BlockStorage;
 
-public class InputNodeFix extends JavaPlugin {
+public class InputNodeFix implements CommandExecutor {
 
 	private CargoInputNode cargoInputNode;
 
@@ -25,8 +26,12 @@ public class InputNodeFix extends JavaPlugin {
 	private Class<?> craftWorldClass, tileEntityClass, nbtTagCompoundClass, nbtTagListClass;
 
 	private boolean fullyEnabled = false;
-
+	
 	public InputNodeFix(JavaPlugin plugin) {
+		_init(plugin);
+	}
+	
+	private void _init(JavaPlugin plugin) {
 		version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3] + ".";
 		craftWorldClass = getOCBClass("CraftWorld");
 		tileEntityClass = getNMSClass("TileEntity");
@@ -48,60 +53,61 @@ public class InputNodeFix extends JavaPlugin {
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-		if (!fullyEnabled) {
-			sender.sendMessage("Plugin not fully enabled yet!");
-			return true;
+		if (!fullyEnabled)
+			return sendMessage(sender, "Plugin not fully enabled yet!");
+		
+		if (!(sender instanceof Player))
+			return sendMessage(sender, "You need to be a player");
+		Player p = (Player) sender;
+		
+		if (!p.hasPermission("slimefunfix.nodes"))
+			return sendMessage(sender, "You got no permission");
+		
+		boolean force = false;
+		boolean blacklist = false;
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].equalsIgnoreCase("force"))
+				force = true;
+			else if (args[i].equalsIgnoreCase("blacklist"))
+				blacklist = true;
 		}
 		
-		if (!(sender instanceof Player)) {
-			sender.sendMessage("You need to be a player");
-			return true;
-		}
-		Player p = (Player) sender;
 		Location pLoc = p.getLocation();
-		int y;
-		if (args.length == 1) {
-			try {
-				y = Integer.valueOf(args[0]);
-				if (y < 0 || 255 < y)
-					throw new IllegalArgumentException("Input value needs to be between 0 and 255");
-			} catch (Exception e) {
-				return true;
-			}
-		} else {
-			y = pLoc.getBlockY();
-		}
-		int edited = 0;
-		int found = 0;
+		int y = pLoc.getBlockY();
+		sendMessage(p, "Fixing Input Nodes in this chunk from Y " + (y - 5) + "-" + (y + 5) + " with arguments: " + (force ? "force" : "keep") + ", " + (blacklist ? "blacklist" : "whitelist"));
+		int edited = 0, found = 0;
+		exit:
 		for (int i = 0; i < 16; i++) {
 			for (int j = 0; j < 16; j++) {
 				for (int k = -5; k < 6; k++) {
 					Block block = pLoc.getChunk().getBlock(i, y + k, j);
 					try {
-						if (processBlock(block, p)) {
+						if (processBlock(block)) {
 							found++;
-							if (fix(block, p))
+							if (fix(block, p, force, blacklist))
 								edited++;
 						}
 					} catch (Exception e) {
-						p.sendMessage(e.toString());
-						p.sendMessage("Version: " + version);
+						e.printStackTrace();
+						sendMessage(p, "Version: " + version);
+						sendMessage(p, "Exception: " + e);
 						for (StackTraceElement traceElement : e.getStackTrace())
-							p.sendMessage(traceElement.toString());
+							sendMessage(p, traceElement.toString());
 						if (e.getCause() != null) {
 							for (StackTraceElement traceElement : e.getCause().getStackTrace())
-								p.sendMessage(traceElement.toString());
+								sendMessage(p, traceElement.toString());
 						}
+						break exit;
 					}
 				}
 			}
 		}
-		sender.sendMessage("Fixed " + edited + " input nodes (" + found + " were already fixed)");
+		sendMessage(p, "Fixed " + edited + " input nodes (" + (found - edited) + " were already fixed)");
 		return true;
 	}
-
-	private boolean fix(Block b, Player p) {
-		if (BlockStorage.hasBlockInfo(b))
+	
+	private boolean fix(Block b, Player p, boolean force, boolean blacklist) {
+		if ((!force) && BlockStorage.hasBlockInfo(b))
 			return false;
 		BlockStorage.addBlockInfo(b, "id", cargoInputNode.getID(), true);
 		if (SlimefunItem.blockhandler.containsKey(cargoInputNode.getID())) {
@@ -112,11 +118,12 @@ public class InputNodeFix extends JavaPlugin {
 					break;
 			}
 		}
-		BlockStorage.addBlockInfo(b, "filter-type", "blacklist", true);
+		if (blacklist)
+			BlockStorage.addBlockInfo(b, "filter-type", "blacklist", true);
 		return true;
 	}
 
-	private boolean processBlock(Block block, Player p) throws Exception {
+	private boolean processBlock(Block block) throws Exception {
 		if (block == null || block.getType() != Material.SKULL)
 			return false;
 		Location loc = block.getLocation();
@@ -141,16 +148,21 @@ public class InputNodeFix extends JavaPlugin {
 			return false;
 		return texture.equals("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTZkMWMxYTY5YTNkZTlmZWM5NjJhNzdiZjNiMmUzNzZkZDI1Yzg3M2EzZDhmMTRmMWRkMzQ1ZGFlNGM0In19fQ==");
 	}
+	
+	private boolean sendMessage(CommandSender cs, String message) {
+		cs.sendMessage(message);
+		return true;
+	}
 
 	private Class<?> getOCBClass(String ocbClassString) {
 		String name = "org.bukkit.craftbukkit." + version + ocbClassString;
-		Class<?> nmsClass = null;
+		Class<?> ocbClass = null;
 		try {
-			nmsClass = Class.forName(name);
+			ocbClass = Class.forName(name);
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
-		return nmsClass;
+		return ocbClass;
 	}
 
 	private Class<?> getNMSClass(String nmsClassString) {
